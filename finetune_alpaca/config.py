@@ -14,11 +14,12 @@ class AlpacaFinetuneConfig:
         self.chunk_size = 100
 
         # Date ranges
+        # Keep validation and test strictly later than train to reduce overfitting pressure.
         self.dataset_begin_time = "2018-01-01"
         self.dataset_end_time = "2025-12-31"
-        self.train_time_range = ["2018-01-01", "2023-12-31"]
-        self.val_time_range = ["2023-10-01", "2024-12-31"]
-        self.test_time_range = ["2024-10-01", "2025-12-31"]
+        self.train_time_range = ["2018-01-01", "2023-06-30"]
+        self.val_time_range = ["2023-07-01", "2024-06-30"]
+        self.test_time_range = ["2024-07-01", "2025-12-31"]
 
         # Windowing and features
         self.lookback_window = 400
