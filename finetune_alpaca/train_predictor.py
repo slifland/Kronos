@@ -4,6 +4,7 @@ import sys
 import time
 from time import gmtime, strftime
 from pathlib import Path
+import argparse
 
 import comet_ml
 import torch
@@ -177,10 +178,16 @@ def main(config):
     distributed = is_distributed_run()
     if distributed:
         rank, world_size, local_rank = setup_ddp()
-        device = torch.device(f"cuda:{local_rank}")
+        requested_device = config.get("device")
+        if requested_device:
+            if not requested_device.startswith("cuda"):
+                raise ValueError("Distributed training requires a CUDA device override like 'cuda:0'.")
+            device = torch.device(requested_device)
+        else:
+            device = torch.device(f"cuda:{local_rank}")
     else:
         rank, world_size, local_rank = 0, 1, 0
-        device = torch.device(detect_best_device())
+        device = torch.device(config.get("device") or detect_best_device())
     set_seed(config["seed"], rank)
 
     save_dir = os.path.join(config["save_path"], config["predictor_save_folder_name"])
@@ -235,4 +242,10 @@ def main(config):
 
 
 if __name__ == "__main__":
-    main(AlpacaFinetuneConfig().__dict__)
+    parser = argparse.ArgumentParser(description="Finetune the Kronos predictor on Alpaca-prepared data.")
+    parser.add_argument("--device", default=None, help="Device override, for example 'mps', 'cpu', or 'cuda:3'.")
+    args = parser.parse_args()
+
+    config = AlpacaFinetuneConfig().__dict__.copy()
+    config["device"] = args.device
+    main(config)
