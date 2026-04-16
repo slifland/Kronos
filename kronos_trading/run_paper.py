@@ -79,10 +79,29 @@ def _timeframe_to_offset(timeframe: str) -> pd.Timedelta:
     raise ValueError(f"Unsupported timeframe: {timeframe}")
 
 
+def _estimate_calendar_buffer_days(timeframe: str, lookback: int) -> int:
+    lower = timeframe.lower()
+    if lower.endswith("min"):
+        minutes = int(lower[:-3])
+        trading_minutes = max(lookback * minutes, 390)
+        trading_days = math.ceil(trading_minutes / 390)
+        return max(7, math.ceil(trading_days * 1.8) + 5)
+    if lower.endswith("hour"):
+        hours = int(lower[:-4])
+        trading_hours = max(lookback * hours, 7)
+        trading_days = math.ceil(trading_hours / 6.5)
+        return max(7, math.ceil(trading_days * 1.8) + 5)
+    if lower.endswith("day"):
+        days = int(lower[:-3])
+        return max(30, math.ceil(lookback * days * 1.5) + 10)
+    raise ValueError(f"Unsupported timeframe: {timeframe}")
+
+
 def _recent_window(timeframe: str, lookback: int, timezone: str = "America/New_York") -> tuple[pd.Timestamp, pd.Timestamp]:
     step = _timeframe_to_offset(timeframe)
     end = pd.Timestamp.now(tz=timezone).floor(step)
-    start = end - step * max(lookback + 10, 450)
+    buffer_days = _estimate_calendar_buffer_days(timeframe, lookback)
+    start = end - pd.Timedelta(days=buffer_days)
     return start, end
 
 
