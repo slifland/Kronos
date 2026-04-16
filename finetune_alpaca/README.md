@@ -79,5 +79,28 @@ python -m kronos_trading.backtest.run \
 - The default config is tuned for a first-pass `15Min` experiment.
 - Single-process runs auto-select `CUDA`, then `MPS`, then `CPU`.
 - The default predictor base model is `Kronos-base`.
+- Weights & Biases logging is enabled by default in [config.py](/Users/sethlifland/dev/Kronos/finetune_alpaca/config.py).
 - Alpaca credentials are required for preprocessing, but not for local training after the pickles are written.
 - The default `feed` is `iex`. If you have a higher-tier Alpaca market data subscription, change the feed in the config.
+
+## Weights & Biases
+
+To log train and validation losses to W&B:
+
+1. Install it:
+```bash
+pip install wandb
+```
+2. Log in:
+```bash
+wandb login
+```
+3. W&B logging is on by default. If you need to disable it, set `use_wandb = False` in [config.py](/Users/sethlifland/dev/Kronos/finetune_alpaca/config.py)
+4. Optionally set:
+```bash
+export WANDB_PROJECT=Kronos-Alpaca-Finetune
+export WANDB_ENTITY=your-team
+export WANDB_NAME=alpaca-predictor-run
+```
+
+The tokenizer and predictor scripts will then log per-batch training loss and per-epoch validation loss on rank 0.

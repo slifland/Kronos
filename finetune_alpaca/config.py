@@ -61,6 +61,13 @@ class AlpacaFinetuneConfig:
             "project_name": "Kronos-Alpaca-Finetune",
             "workspace": os.getenv("COMET_WORKSPACE", ""),
         }
+        self.use_wandb = True
+        self.wandb_config = {
+            "project": os.getenv("WANDB_PROJECT", "Kronos-Alpaca-Finetune"),
+            "entity": os.getenv("WANDB_ENTITY", ""),
+            "name": os.getenv("WANDB_NAME", ""),
+            "tags": ["alpaca_finetune"],
+        }
         self.comet_tag = "alpaca_finetune"
         self.comet_name = "alpaca_finetune"
         self.save_path = "./outputs/models"

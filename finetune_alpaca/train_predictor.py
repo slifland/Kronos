@@ -21,6 +21,11 @@ from finetune_alpaca.dataset import AlpacaPickleDataset
 from finetune_alpaca.runtime import detect_best_device, is_distributed_run, unwrap_model
 from model.kronos import Kronos, KronosTokenizer
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+
 
 def create_dataloaders(config, rank, world_size, distributed, device):
     train_dataset = AlpacaPickleDataset("train")
@@ -53,7 +58,7 @@ def create_dataloaders(config, rank, world_size, distributed, device):
     return train_loader, val_loader, train_dataset, valid_dataset
 
 
-def train_model(model, tokenizer, device, config, save_dir, logger, rank, world_size, distributed):
+def train_model(model, tokenizer, device, config, save_dir, comet_logger, wandb_run, rank, world_size, distributed):
     start_time = time.time()
     core_model = unwrap_model(model)
     train_loader, val_loader, train_dataset, valid_dataset = create_dataloaders(
@@ -122,10 +127,21 @@ def train_model(model, tokenizer, device, config, save_dir, logger, rank, world_
                     f"[Epoch {epoch_idx + 1}/{config['epochs']}, Step {i + 1}/{len(train_loader)}] "
                     f"LR {optimizer.param_groups[0]['lr']:.6f}, Loss: {loss.item():.4f}"
                 )
-            if rank == 0 and logger:
-                logger.log_metric("train_predictor_loss_batch", loss.item(), step=batch_idx_global)
-                logger.log_metric("train_S1_loss_each_batch", s1_loss.item(), step=batch_idx_global)
-                logger.log_metric("train_S2_loss_each_batch", s2_loss.item(), step=batch_idx_global)
+            if rank == 0 and comet_logger:
+                comet_logger.log_metric("train_predictor_loss_batch", loss.item(), step=batch_idx_global)
+                comet_logger.log_metric("train_S1_loss_each_batch", s1_loss.item(), step=batch_idx_global)
+                comet_logger.log_metric("train_S2_loss_each_batch", s2_loss.item(), step=batch_idx_global)
+            if rank == 0 and wandb_run:
+                wandb_run.log(
+                    {
+                        "train/predictor_loss_batch": loss.item(),
+                        "train/s1_loss_batch": s1_loss.item(),
+                        "train/s2_loss_batch": s2_loss.item(),
+                        "train/predictor_lr": optimizer.param_groups[0]["lr"],
+                        "train/epoch": epoch_idx + 1,
+                    },
+                    step=batch_idx_global,
+                )
 
             if rank == 0 and hasattr(train_iter, "set_postfix"):
                 train_iter.set_postfix(loss=f"{loss.item():.4f}")
@@ -165,6 +181,17 @@ def train_model(model, tokenizer, device, config, save_dir, logger, rank, world_
 
         if rank == 0:
             print(f"Epoch {epoch_idx + 1}: val_loss={avg_val_loss:.4f}, elapsed={format_time(time.time() - epoch_start_time)}")
+            if comet_logger:
+                comet_logger.log_metric("val_predictor_loss_epoch", avg_val_loss, epoch=epoch_idx)
+            if wandb_run:
+                wandb_run.log(
+                    {
+                        "val/predictor_loss_epoch": avg_val_loss,
+                        "train/predictor_lr_epoch_end": optimizer.param_groups[0]["lr"],
+                        "train/epoch": epoch_idx + 1,
+                    },
+                    step=batch_idx_global,
+                )
             if avg_val_loss < best_val_loss:
                 best_val_loss = avg_val_loss
                 save_path = f"{save_dir}/checkpoints/best_model"
@@ -192,6 +219,7 @@ def main(config):
 
     save_dir = os.path.join(config["save_path"], config["predictor_save_folder_name"])
     comet_logger = None
+    wandb_run = None
     if rank == 0:
         os.makedirs(os.path.join(save_dir, "checkpoints"), exist_ok=True)
         if config["use_comet"]:
@@ -203,6 +231,21 @@ def main(config):
             comet_logger.add_tag(config["comet_tag"])
             comet_logger.set_name(config["comet_name"])
             comet_logger.log_parameters(config)
+        if config.get("use_wandb"):
+            if wandb is None:
+                raise ImportError("Weights & Biases logging requested, but `wandb` is not installed.")
+            wandb_kwargs = {
+                "project": config["wandb_config"]["project"],
+                "config": config,
+                "dir": save_dir,
+            }
+            if config["wandb_config"].get("entity"):
+                wandb_kwargs["entity"] = config["wandb_config"]["entity"]
+            if config["wandb_config"].get("name"):
+                wandb_kwargs["name"] = config["wandb_config"]["name"]
+            if config["wandb_config"].get("tags"):
+                wandb_kwargs["tags"] = config["wandb_config"]["tags"]
+            wandb_run = wandb.init(**wandb_kwargs)
 
     if distributed:
         dist.barrier()
@@ -230,12 +273,14 @@ def main(config):
         print(f"Training predictor on device: {device}")
         print(f"Predictor model size: {get_model_size(unwrap_model(model))}")
 
-    result = train_model(model, tokenizer, device, config, save_dir, comet_logger, rank, world_size, distributed)
+    result = train_model(model, tokenizer, device, config, save_dir, comet_logger, wandb_run, rank, world_size, distributed)
     if rank == 0:
         with open(os.path.join(save_dir, "summary.json"), "w", encoding="utf-8") as handle:
             json.dump({"start_time": strftime("%Y-%m-%dT%H-%M-%S", gmtime()), "result": result}, handle, indent=2)
         if comet_logger:
             comet_logger.end()
+        if wandb_run:
+            wandb_run.finish()
 
     if distributed:
         cleanup_ddp()
