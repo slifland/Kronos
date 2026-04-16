@@ -5,6 +5,7 @@ This package adds an Alpaca-backed research loop on top of the core Kronos model
 - fetch historical bars from Alpaca
 - run a Kronos forecast-driven strategy
 - backtest the strategy on those bars
+- run the same strategy logic against Alpaca paper trading
 - compare the strategy against benchmark curves generated from Alpaca data
 
 ## Environment
@@ -41,8 +42,47 @@ Outputs are written to `backtest_runs/<symbol>_<timestamp>/`:
 - `benchmark_curves.csv`
 - `summary.json`
 
+## Run Paper Trading
+
+Start with a dry run so the script prints decisions without submitting paper orders:
+
+```bash
+python -m kronos_trading.run_paper \
+  --symbols AAPL,MSFT \
+  --timeframe 15Min \
+  --lookback 400 \
+  --threshold-bps 20 \
+  --portfolio-fraction 0.10 \
+  --device mps \
+  --dry-run
+```
+
+To keep polling on an interval:
+
+```bash
+python -m kronos_trading.run_paper \
+  --symbols AAPL,MSFT \
+  --timeframe 15Min \
+  --poll-seconds 60 \
+  --portfolio-fraction 0.10 \
+  --device mps \
+  --dry-run
+```
+
+The paper runner defaults to `NeoQuasar/Kronos-base`, but you can plug in fine-tuned checkpoints later:
+
+```bash
+python -m kronos_trading.run_paper \
+  --symbols AAPL,MSFT \
+  --model-id ./outputs/models/alpaca_predictor/checkpoints/best_model \
+  --tokenizer-id ./outputs/models/alpaca_tokenizer/checkpoints/best_model \
+  --dry-run
+```
+
 ## Notes
 
-- The first version is intentionally paper-safe: it only uses Alpaca historical data and does not place orders.
+- The backtest runner only uses Alpaca historical data and does not place orders.
+- The paper runner places Alpaca paper orders unless you pass `--dry-run`.
+- The paper runner uses the Alpaca paper trading endpoint `https://paper-api.alpaca.markets`.
 - Benchmarks currently include buy-and-hold on the traded symbol, a momentum baseline, and any additional benchmark symbols you pass in.
 - If you pass multiple benchmark symbols, the runner also computes an equal-weight benchmark.
