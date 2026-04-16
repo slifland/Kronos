@@ -1,0 +1,47 @@
+{
+  "symbols_requested": [
+    "QQQ",
+    "SPY"
+  ],
+  "symbols_retained": {
+    "train": [
+      "QQQ",
+      "SPY"
+    ],
+    "val": [
+      "QQQ",
+      "SPY"
+    ],
+    "test": [
+      "QQQ",
+      "SPY"
+    ]
+  },
+  "timeframe": "15Min",
+  "feed": "iex",
+  "adjustment": "raw",
+  "dataset_begin_time": "2018-01-01",
+  "dataset_end_time": "2025-12-31",
+  "train_time_range": [
+    "2018-01-01",
+    "2023-12-31"
+  ],
+  "val_time_range": [
+    "2023-10-01",
+    "2024-12-31"
+  ],
+  "test_time_range": [
+    "2024-10-01",
+    "2025-12-31"
+  ],
+  "lookback_window": 400,
+  "predict_window": 1,
+  "feature_list": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "vol",
+    "amt"
+  ]
+}

@@ -213,6 +213,22 @@ Running this script will generate a plot comparing the ground truth data against
 
 Additionally, we provide a script that makes predictions without Volume and Amount data, which can be found in [`examples/prediction_wo_vol_example.py`](examples/prediction_wo_vol_example.py).
 
+## 📊 Alpaca Backtesting
+
+This repository now includes an Alpaca-backed research workflow under [`kronos_trading`](kronos_trading/README.md). It adds:
+
+- historical stock bar ingestion from Alpaca
+- a `KronosPredictor`-driven signal wrapper
+- a reusable backtest engine
+- benchmark reporting for buy-and-hold, momentum, and optional benchmark symbols
+
+The first entry point is:
+
+```shell
+python -m kronos_trading.backtest.run --help
+```
+
+See [`kronos_trading/README.md`](kronos_trading/README.md) for setup, environment variables, and a sample CLI command.
 
 ## 🔧 Finetuning on Your Own Data (A-Share Market Example)
 
@@ -257,6 +273,10 @@ python finetune/qlib_data_preprocess.py
 ```
 
 After running, you will find `train_data.pkl`, `val_data.pkl`, and `test_data.pkl` in the directory specified by `dataset_path` in your config.
+
+### Alpaca-Based Alternative
+
+If you want to finetune on Alpaca historical bars instead of Qlib, use the parallel workflow in [`finetune_alpaca/README.md`](finetune_alpaca/README.md). This path is better suited for a US-equities experiment such as `15Min` S&P 500 bars pulled from Alpaca.
 
 ### Step 3: Run the Finetuning
 

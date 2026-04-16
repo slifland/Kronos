@@ -1,0 +1,4 @@
+# Replace this starter universe with your S&P 500 constituent list.
+# One symbol per line.
+QQQ
+SPY

@@ -1,0 +1,5 @@
+1. Define a way to finetune a Kronos model to specifcially be able to predict 15 minute data for S&P 500.
+2. Define benchmarks for past-trading with this model to see how effective it would've been at trading on 15 minute intervals on historical data.
+3. Define a way to do paper trading with this model through Alpaca API.
+
+We should be able to continuously iterate on this model to try to get the best model possible, mainly through the local benchmarks.
